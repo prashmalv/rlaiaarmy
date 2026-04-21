@@ -1,0 +1,36 @@
+# Python virtual environments
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment / secrets — NEVER commit these
+.env
+*.env
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Node
+node_modules/
+dist/
+.next/
+
+# Generated output (large, not needed in repo)
+ai-dev-team/backend/generated_projects/
+ai-dev-team/backend/reports_output/
+ai-marketing-team/backend/generated_projects/
+
+# IDE
+.vscode/
+.idea/
+*.DS_Store
+
+# Logs
+*.log
