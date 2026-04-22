@@ -218,8 +218,37 @@ async def get_posts():
         posts = result.scalars().all()
         return {"posts": [{"id": p.id, "platform": p.platform, "content_type": p.content_type,
                            "title": p.title, "body": p.body[:300], "hashtags": p.hashtags,
+                           "image_prompt": p.image_prompt, "image_url": p.image_url,
                            "status": p.status, "created_at": str(p.created_at)}
                           for p in posts]}
+
+class PostSave(BaseModel):
+    platform: str
+    content_type: str = ""
+    title: str = ""
+    body: str = ""
+    hashtags: List[str] = []
+    image_prompt: str = ""
+    image_url: str = ""
+
+@app.post("/api/posts/save")
+async def save_post(data: PostSave):
+    async with AsyncSessionLocal() as db:
+        post = ContentPost(
+            id=str(uuid.uuid4())[:8],
+            platform=data.platform,
+            content_type=data.content_type,
+            title=data.title[:200] if data.title else "",
+            body=data.body,
+            hashtags=data.hashtags,
+            image_prompt=data.image_prompt,
+            image_url=data.image_url or None,
+            status="draft",
+            created_by="Manual (Calendar)",
+        )
+        db.add(post)
+        await db.commit()
+    return {"id": post.id, "status": "saved"}
 
 @app.post("/api/posts/{post_id}/approve")
 async def approve_post(post_id: str):
@@ -242,17 +271,53 @@ async def publish_post(post_id: str):
             raise HTTPException(404)
 
         if post.platform == "linkedin":
-            poster_result = LinkedInPoster().post(post.body)
+            poster_result = LinkedInPoster().post(post.body, post.image_url)
         elif post.platform == "facebook":
-            poster_result = FacebookPoster().post(post.body)
+            poster_result = FacebookPoster().post(post.body, post.image_url)
         else:
-            poster_result = InstagramPoster().post(post.body)
+            poster_result = InstagramPoster().post(post.body, post.image_url)
 
         post.status = poster_result.get("status", "posted")
         post.platform_post_id = poster_result.get("post_id", "")
         post.posted_at = datetime.utcnow()
         await db.commit()
     return poster_result
+
+class PostLiveRequest(BaseModel):
+    image_url: Optional[str] = None
+
+@app.post("/api/posts/{post_id}/post-live")
+async def post_live(post_id: str, req: PostLiveRequest = PostLiveRequest()):
+    """Post immediately — no approval step. Optionally generates an image first."""
+    from tools.social_poster import LinkedInPoster, FacebookPoster, InstagramPoster
+    from tools.image_generator import generate_image
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(ContentPost).where(ContentPost.id == post_id))
+        post = result.scalar_one_or_none()
+        if not post:
+            raise HTTPException(404)
+
+        # Use provided image URL, or existing one, or auto-generate
+        image_url = req.image_url or post.image_url
+        if not image_url and post.image_prompt:
+            image_url = await asyncio.to_thread(generate_image, post.image_prompt, post.platform)
+            if image_url:
+                post.image_url = image_url
+
+        if post.platform == "linkedin":
+            poster_result = await asyncio.to_thread(LinkedInPoster().post, post.body, image_url)
+        elif post.platform == "facebook":
+            poster_result = await asyncio.to_thread(FacebookPoster().post, post.body, image_url)
+        else:
+            poster_result = await asyncio.to_thread(InstagramPoster().post, post.body, image_url)
+
+        post.status = poster_result.get("status", "posted")
+        post.platform_post_id = poster_result.get("post_id", "")
+        post.posted_at = datetime.utcnow()
+        await db.commit()
+
+    return {**poster_result, "image_url": image_url}
 
 # ── Opportunities ────────────────────────────────────────────────────────────
 @app.get("/api/opportunities")
@@ -290,11 +355,11 @@ class ContentRequest(BaseModel):
 async def generate_content(req: ContentRequest):
     creator = ContentCreatorAgent()
     if req.platform == "linkedin":
-        result = creator.create_linkedin_post(req.content_type, req.product, req.topic, req.industry)
+        result = await asyncio.to_thread(creator.create_linkedin_post, req.content_type, req.product, req.topic, req.industry)
     elif req.platform == "instagram":
-        result = creator.create_instagram_content(req.content_type, req.product, req.topic)
+        result = await asyncio.to_thread(creator.create_instagram_content, req.content_type, req.product, req.topic)
     else:
-        result = creator.create_facebook_post(req.content_type, req.product, req.topic)
+        result = await asyncio.to_thread(creator.create_facebook_post, req.content_type, req.product, req.topic)
     return result
 
 @app.post("/api/generate/email")
@@ -309,18 +374,20 @@ async def generate_email(lead_id: str, email_type: str = "nurture"):
                  "company": lead.company, "domain": lead.domain, "designation": lead.designation}
     agent = EmailCampaignAgent()
     if email_type == "cold":
-        return agent.create_cold_outreach(lead_dict)
-    return agent.create_nurture_email(lead_dict)
+        return await asyncio.to_thread(agent.create_cold_outreach, lead_dict)
+    return await asyncio.to_thread(agent.create_nurture_email, lead_dict)
 
 @app.get("/api/generate/weekly-calendar")
 async def generate_weekly_calendar(focus: str = None):
     cmo = CMOAgent()
-    return cmo.create_weekly_content_calendar(focus)
+    result = await asyncio.to_thread(cmo.create_weekly_content_calendar, focus)
+    return result
 
 @app.get("/api/generate/lead-suggestions")
 async def generate_lead_suggestions():
     intel = LeadIntelligenceAgent()
-    return {"suggestions": intel.generate_lead_suggestions(10)}
+    suggestions = await asyncio.to_thread(intel.generate_lead_suggestions, 10)
+    return {"suggestions": suggestions}
 
 @app.get("/api/stats")
 async def get_stats():

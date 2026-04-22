@@ -2,6 +2,7 @@
 Social media posting tool.
 Real API calls when credentials are set; logs to DB in dry-run mode.
 """
+from typing import Dict
 import httpx
 import json
 from config.settings import settings
@@ -103,7 +104,3 @@ class InstagramPoster:
                 return {"status": "error", "detail": str(data)[:200]}
         except Exception as e:
             return {"status": "error", "message": str(e)}
-
-
-# Type fix
-from typing import Dict

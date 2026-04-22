@@ -109,6 +109,7 @@ export function ProjectDashboard() {
   const isPendingApproval = project.status === 'pending_approval'
   const isApproved = project.status === 'approved'
   const isRejected = project.status === 'rejected'
+  const isError = project.status === 'error'
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
@@ -145,10 +146,11 @@ export function ProjectDashboard() {
       </div>
 
       {/* Status Banner */}
-      {(isPendingApproval || isApproved || isRejected) && (
+      {(isPendingApproval || isApproved || isRejected || isError) && (
         <div className={`rounded-xl p-4 flex items-center gap-3 border ${
           isPendingApproval ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400' :
           isApproved ? 'bg-green-500/10 border-green-500/30 text-green-400' :
+          isError ? 'bg-red-500/10 border-red-500/30 text-red-400' :
           'bg-red-500/10 border-red-500/30 text-red-400'
         }`}>
           {isPendingApproval ? <Clock size={20} /> : isApproved ? <CheckCircle size={20} /> : <XCircle size={20} />}
@@ -156,9 +158,11 @@ export function ProjectDashboard() {
             <div className="font-semibold">
               {isPendingApproval ? 'Pending Senior Management Approval' :
                isApproved ? 'Approved — Ready for Production Deployment' :
+               isError ? `Error — ${project.error || 'An unexpected error occurred'}` :
                `Rejected — ${project.rejection_reason || 'No reason given'}`}
             </div>
             {isPendingApproval && <div className="text-sm opacity-80">Approval email sent · Application running on Dev environment</div>}
+            {isError && <div className="text-sm opacity-80 mt-1">Check backend terminal for full traceback. Restart and try again.</div>}
           </div>
         </div>
       )}

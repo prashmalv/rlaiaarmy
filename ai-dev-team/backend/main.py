@@ -159,6 +159,7 @@ async def get_logs(project_id: str):
 # ── Background task ─────────────────────────────────────────────────────────
 async def _run_project(project_id: str, name: str, requirements: str):
     active_runs[project_id]["status"] = "in_progress"
+    loop = asyncio.get_running_loop()
 
     def progress_callback(data: dict):
         event_type = data.get("event", "log")
@@ -168,7 +169,8 @@ async def _run_project(project_id: str, name: str, requirements: str):
             active_runs[project_id]["phases"].append(data)
             active_runs[project_id]["current_phase"] = data.get("name", "")
 
-        asyncio.create_task(broadcast(project_id, data))
+        # Safe to call from background thread
+        asyncio.run_coroutine_threadsafe(broadcast(project_id, data), loop)
 
     manager = SprintManager(project_id=project_id, project_name=name)
     manager.set_progress_callback(progress_callback)

@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     INSTAGRAM_ACCESS_TOKEN: str = ""
     INSTAGRAM_BUSINESS_ACCOUNT_ID: str = ""
 
+    # Image generation (optional)
+    OPENAI_API_KEY: str = ""               # For DALL-E image generation
+    PEXELS_API_KEY: str = ""               # For Pexels stock photos (free at pexels.com/api)
+
     # News & Intelligence
     NEWS_API_KEY: str = ""                 # newsapi.org free tier
     SERPER_API_KEY: str = ""               # serper.dev for Google search

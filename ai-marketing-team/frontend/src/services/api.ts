@@ -18,6 +18,8 @@ export const postsApi = {
   getAll: () => api.get('/posts').then(r => r.data.posts),
   approve: (id: string) => api.post(`/posts/${id}/approve`).then(r => r.data),
   publish: (id: string) => api.post(`/posts/${id}/publish`).then(r => r.data),
+  postLive: (id: string, imageUrl?: string) => api.post(`/posts/${id}/post-live`, { image_url: imageUrl }).then(r => r.data),
+  saveGenerated: (data: any) => api.post('/posts/save', data).then(r => r.data),
 }
 
 export const opportunitiesApi = {

@@ -34,6 +34,7 @@ class ContentPost(Base):
     body = Column(Text)
     hashtags = Column(JSON, default=list)
     image_prompt = Column(Text)      # For AI image generation
+    image_url = Column(String)       # Actual image URL once generated/provided
     status = Column(String, default="draft")  # draft, approved, posted, failed
     scheduled_at = Column(DateTime)
     posted_at = Column(DateTime)

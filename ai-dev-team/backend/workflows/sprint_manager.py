@@ -57,14 +57,18 @@ class SprintManager:
         if self.progress_callback:
             self.progress_callback({"event": event, **data})
 
-    def _save_file(self, path: str, content: str):
+    def _save_file(self, path: str, content):
+        if not path:
+            return
+        if not isinstance(content, str):
+            content = str(content) if content is not None else ""
         full_path = os.path.join(self.output_dir, path)
         os.makedirs(os.path.dirname(full_path), exist_ok=True)
         with open(full_path, "w", encoding="utf-8") as f:
             f.write(content)
         self.all_generated_files.append({"path": path, "full_path": full_path})
 
-    async def run(self, raw_requirements: str) -> Dict:
+    def run(self, raw_requirements: str) -> Dict:
         os.makedirs(self.output_dir, exist_ok=True)
         self._emit("phase", {"name": "REQUIREMENTS ANALYSIS", "status": "started"})
 
@@ -178,12 +182,21 @@ class SprintManager:
 
                 # Save generated files
                 for file_data in result.get("files", []):
-                    self._save_file(file_data["path"], file_data.get("content", ""))
+                    if not isinstance(file_data, dict):
+                        continue
+                    path = file_data.get("path")
+                    if not path:
+                        continue
+                    self._save_file(path, file_data.get("content") or "")
                     sprint_files.append(file_data)
-                    self.all_generated_files.append(file_data)
 
                 for test_data in result.get("tests", []):
-                    self._save_file(test_data["path"], test_data.get("content", ""))
+                    if not isinstance(test_data, dict):
+                        continue
+                    path = test_data.get("path")
+                    if not path:
+                        continue
+                    self._save_file(path, test_data.get("content") or "")
                     sprint_results["tests"].append(test_data)
 
                 sprint_results["stories_completed"].append({
@@ -230,7 +243,8 @@ class SprintManager:
                   f"Generated {len(integration_result.get('files',[]))} integration files")
 
         for file_data in integration_result.get("files", []):
-            self._save_file(file_data["path"], file_data.get("content", ""))
+            if isinstance(file_data, dict) and file_data.get("path"):
+                self._save_file(file_data["path"], file_data.get("content") or "")
 
         self._emit("phase", {"name": "INTEGRATION", "status": "complete",
                              "conflicts_resolved": len(integration_result.get("conflicts_resolved", []))})
