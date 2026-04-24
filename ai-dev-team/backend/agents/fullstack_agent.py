@@ -1,4 +1,4 @@
-from agents.base_agent import BaseAgent
+from agents.base_agent import BaseAgent, _parse_json_robust
 import json
 from typing import Dict, List
 
@@ -66,13 +66,9 @@ Return ONLY valid JSON."""
 
         output = self._call_llm(self._system_prompt(), prompt, max_tokens=8096)
         try:
-            if "```json" in output:
-                output = output.split("```json")[1].split("```")[0].strip()
-            elif "```" in output:
-                output = output.split("```")[1].split("```")[0].strip()
-            return json.loads(output)
+            return _parse_json_robust(output)
         except:
-            return {"files": [], "tests": [], "notes": output, "error": "Parse failed"}
+            return {"files": [], "tests": [], "notes": output[:300], "error": "Parse failed"}
 
     def integrate_modules(self, all_modules_code: List[Dict], architecture: Dict) -> Dict:
         """Handle integration between multiple modules - resolves conflicts and ensures cohesion."""
@@ -120,10 +116,6 @@ Return ONLY valid JSON."""
 
         output = self._call_llm(self._system_prompt(), prompt, max_tokens=8096)
         try:
-            if "```json" in output:
-                output = output.split("```json")[1].split("```")[0].strip()
-            elif "```" in output:
-                output = output.split("```")[1].split("```")[0].strip()
-            return json.loads(output)
+            return _parse_json_robust(output)
         except:
-            return {"files": [], "conflicts_resolved": [], "notes": output}
+            return {"files": [], "conflicts_resolved": [], "notes": output[:300]}

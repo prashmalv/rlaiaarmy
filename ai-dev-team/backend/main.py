@@ -1,7 +1,9 @@
 import asyncio
+import io
 import json
 import os
 import uuid
+import zipfile
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Dict, Optional
@@ -9,7 +11,7 @@ from typing import Dict, Optional
 import pandas as pd
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -121,6 +123,61 @@ async def get_project(project_id: str):
     if project_id not in active_runs:
         raise HTTPException(404, "Project not found")
     return active_runs[project_id]
+
+@app.get("/api/projects/{project_id}/files")
+async def list_files(project_id: str):
+    if project_id not in active_runs:
+        raise HTTPException(404, "Project not found")
+    project = active_runs[project_id]
+    output_dir = project.get("output_dir")
+    if not output_dir or not os.path.exists(output_dir):
+        return {"files": []}
+
+    file_list = []
+    for root, dirs, files in os.walk(output_dir):
+        dirs[:] = [d for d in dirs if d not in {"__pycache__", ".git", "node_modules"}]
+        for fname in files:
+            full = os.path.join(root, fname)
+            rel = os.path.relpath(full, output_dir)
+            size = os.path.getsize(full)
+            file_list.append({"path": rel, "size": size,
+                               "ext": os.path.splitext(fname)[1].lstrip(".")})
+    return {"files": sorted(file_list, key=lambda x: x["path"]), "output_dir": output_dir}
+
+@app.get("/api/projects/{project_id}/files/view")
+async def view_file(project_id: str, path: str):
+    if project_id not in active_runs:
+        raise HTTPException(404, "Project not found")
+    output_dir = active_runs[project_id].get("output_dir", "")
+    full_path = os.path.normpath(os.path.join(output_dir, path))
+    if not full_path.startswith(os.path.normpath(output_dir)):
+        raise HTTPException(403, "Path traversal not allowed")
+    if not os.path.isfile(full_path):
+        raise HTTPException(404, "File not found")
+    with open(full_path, "r", encoding="utf-8", errors="replace") as f:
+        content = f.read()
+    return {"path": path, "content": content}
+
+@app.get("/api/projects/{project_id}/download")
+async def download_project(project_id: str):
+    if project_id not in active_runs:
+        raise HTTPException(404, "Project not found")
+    output_dir = active_runs[project_id].get("output_dir")
+    if not output_dir or not os.path.exists(output_dir):
+        raise HTTPException(404, "No generated files yet")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for root, dirs, files in os.walk(output_dir):
+            dirs[:] = [d for d in dirs if d not in {"__pycache__", ".git", "node_modules"}]
+            for fname in files:
+                full = os.path.join(root, fname)
+                arc = os.path.relpath(full, os.path.dirname(output_dir))
+                zf.write(full, arc)
+    buf.seek(0)
+    project_name = active_runs[project_id].get("name", project_id).replace(" ", "_")
+    return StreamingResponse(buf, media_type="application/zip",
+                             headers={"Content-Disposition": f'attachment; filename="{project_name}_generated.zip"'})
 
 @app.get("/api/projects/{project_id}/report")
 async def get_report(project_id: str):

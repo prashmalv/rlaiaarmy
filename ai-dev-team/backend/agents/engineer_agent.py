@@ -1,4 +1,4 @@
-from agents.base_agent import BaseAgent
+from agents.base_agent import BaseAgent, _parse_json_robust
 import json
 import os
 from typing import Dict, List
@@ -59,13 +59,9 @@ Return ONLY valid JSON."""
 
         output = self._call_llm(self._system_prompt(), prompt, max_tokens=8096)
         try:
-            if "```json" in output:
-                output = output.split("```json")[1].split("```")[0].strip()
-            elif "```" in output:
-                output = output.split("```")[1].split("```")[0].strip()
-            return json.loads(output)
+            return _parse_json_robust(output)
         except:
-            return {"files": [], "tests": [], "notes": output, "error": "Parse failed"}
+            return {"files": [], "tests": [], "notes": output[:300], "error": "Parse failed"}
 
     def write_unit_tests(self, code_files: List[Dict], story: Dict) -> Dict:
         files_summary = "\n".join([f"File: {f['path']}\n{f['content'][:500]}..." for f in code_files])
@@ -90,10 +86,6 @@ Return JSON:
 
         output = self._call_llm(self._system_prompt(), prompt, max_tokens=4096)
         try:
-            if "```" in output:
-                output = output.split("```")[1].split("```")[0].strip()
-                if output.startswith("json"):
-                    output = output[4:].strip()
-            return json.loads(output)
+            return _parse_json_robust(output)
         except:
             return {"test_files": [], "coverage_estimate": 0}

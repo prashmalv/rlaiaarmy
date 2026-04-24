@@ -1,4 +1,4 @@
-from agents.base_agent import BaseAgent
+from agents.base_agent import BaseAgent, _parse_json_robust
 import json
 from typing import Dict, List
 
@@ -78,13 +78,15 @@ Return ONLY valid JSON."""
 
         output = self._call_llm(self._system_prompt(), prompt, max_tokens=8096)
         try:
-            if "```json" in output:
-                output = output.split("```json")[1].split("```")[0].strip()
-            elif "```" in output:
-                output = output.split("```")[1].split("```")[0].strip()
-            return json.loads(output)
+            return _parse_json_robust(output)
         except:
-            return {"error": "Architecture parsing failed", "raw": output}
+            return {
+                "architecture_pattern": "Layered MVC",
+                "tech_stack": {"backend": "FastAPI", "frontend": "React", "database": "SQLite"},
+                "modules": [], "database_schema": [], "security_requirements": [],
+                "coding_standards": {}, "integration_points": [], "deployment": {},
+                "error": "Architecture parse failed — using fallback", "raw": output[:300]
+            }
 
     def assign_stories_to_modules(self, stories: List[Dict], architecture: Dict) -> List[Dict]:
         """Map user stories to architecture modules and assign to engineers."""
@@ -109,11 +111,7 @@ Return ONLY valid JSON array."""
 
         output = self._call_llm(self._system_prompt(), prompt)
         try:
-            if "```" in output:
-                output = output.split("```")[1].split("```")[0].strip()
-                if output.startswith("json"):
-                    output = output[4:].strip()
-            return json.loads(output)
+            return _parse_json_robust(output)
         except:
             return []
 
@@ -138,10 +136,6 @@ Return JSON:
 
         output = self._call_llm(self._system_prompt(), prompt)
         try:
-            if "```" in output:
-                output = output.split("```")[1].split("```")[0].strip()
-                if output.startswith("json"):
-                    output = output[4:].strip()
-            return json.loads(output)
+            return _parse_json_robust(output)
         except:
-            return {"approved": True, "score": 80, "issues": [], "summary": output}
+            return {"approved": True, "score": 80, "issues": [], "summary": output[:300]}

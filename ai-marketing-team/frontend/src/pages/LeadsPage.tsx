@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Plus, Trash2, Mail, ExternalLink, RefreshCw } from 'lucide-react'
+import { Plus, Trash2, Mail, ExternalLink, RefreshCw, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { leadsApi, generateApi } from '../services/api'
+import { exportLeads } from '../utils/export'
 
 const DOMAINS = ['banking', 'healthcare', 'insurance', 'manufacturing', 'retail', 'government', 'hr', 'education', 'ecommerce', 'telecom', 'fmcg', 'technology']
 const domainColor: Record<string, string> = {
@@ -53,7 +54,15 @@ export function LeadsPage() {
           <h1 className="text-2xl font-bold text-white">Leads</h1>
           <p className="text-slate-400 text-sm mt-1">{leads.length} contacts · Nurture emails sent daily</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-1 bg-slate-800 border border-slate-700 rounded-lg p-1">
+            {(['csv','json','md'] as const).map(fmt => (
+              <button key={fmt} onClick={() => exportLeads(leads, fmt)}
+                className="flex items-center gap-1 text-slate-400 hover:text-white px-2 py-1 rounded text-xs transition-colors">
+                <Download size={11} /> .{fmt}
+              </button>
+            ))}
+          </div>
           <button onClick={getSuggestions} disabled={generating}
             className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm transition-colors">
             {generating ? <RefreshCw size={14} className="animate-spin" /> : <RefreshCw size={14} />}

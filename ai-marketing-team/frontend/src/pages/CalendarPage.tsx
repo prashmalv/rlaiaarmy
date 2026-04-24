@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Loader2, RefreshCw, Calendar, Send } from 'lucide-react'
+import { Loader2, RefreshCw, Calendar, Send, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { generateApi, postsApi } from '../services/api'
+import { exportCalendar } from '../utils/export'
 
 const platformColors: Record<string, string> = {
   linkedin: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
@@ -106,8 +107,20 @@ export function CalendarPage() {
       {calendar && !loading && (
         <div className="space-y-4">
           <div className="bg-blue-600/10 border border-blue-500/30 rounded-xl p-4">
-            <div className="font-semibold text-white">{calendar.week_theme}</div>
-            {calendar.cmo_notes && <div className="text-slate-400 text-sm mt-1">{calendar.cmo_notes}</div>}
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="font-semibold text-white">{calendar.week_theme}</div>
+                {calendar.cmo_notes && <div className="text-slate-400 text-sm mt-1">{calendar.cmo_notes}</div>}
+              </div>
+              <div className="flex gap-1 bg-slate-800/60 border border-slate-700 rounded-lg p-1 shrink-0">
+                {(['csv','json','md'] as const).map(fmt => (
+                  <button key={fmt} onClick={() => exportCalendar(calendar, fmt)}
+                    className="flex items-center gap-1 text-slate-400 hover:text-white px-2 py-1 rounded text-xs transition-colors">
+                    <Download size={11} /> .{fmt}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <p className="text-slate-500 text-xs">Click "Create Post" on any item to generate full content and add it to your Content Queue</p>

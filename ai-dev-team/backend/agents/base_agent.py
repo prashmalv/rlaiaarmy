@@ -5,6 +5,28 @@ import json
 
 client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
+
+def _parse_json_robust(text: str):
+    """Strip markdown fences, try multiple extraction strategies."""
+    if "```json" in text:
+        text = text.split("```json")[1].split("```")[0].strip()
+    elif "```" in text:
+        text = text.split("```")[1].split("```")[0].strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    for start_ch, end_ch in [('{', '}'), ('[', ']')]:
+        s = text.find(start_ch)
+        e = text.rfind(end_ch)
+        if s != -1 and e > s:
+            try:
+                return json.loads(text[s:e + 1])
+            except json.JSONDecodeError:
+                pass
+    raise json.JSONDecodeError("Cannot parse JSON", text, 0)
+
+
 class BaseAgent:
     """Base class for all AI Dev Team agents."""
 

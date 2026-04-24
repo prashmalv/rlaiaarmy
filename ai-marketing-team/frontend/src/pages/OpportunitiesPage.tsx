@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Lightbulb, CheckCircle, XCircle, RefreshCw, ExternalLink } from 'lucide-react'
+import { Lightbulb, CheckCircle, XCircle, RefreshCw, ExternalLink, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { opportunitiesApi } from '../services/api'
+import { exportOpportunities } from '../utils/export'
 
 const priorityConfig: Record<string, string> = {
   High: 'bg-red-500/20 text-red-400 border-red-500/30',
@@ -38,9 +39,19 @@ export function OpportunitiesPage() {
           <h1 className="text-2xl font-bold text-white">Opportunities</h1>
           <p className="text-slate-400 text-sm mt-1">{opps.filter(o => o.status === 'new').length} new opportunities discovered by Vikram (Intel)</p>
         </div>
-        <button onClick={load} className="p-2 text-slate-400 hover:text-white transition-colors">
-          <RefreshCw size={16} />
-        </button>
+        <div className="flex gap-2 items-center">
+          <div className="flex gap-1 bg-slate-800 border border-slate-700 rounded-lg p-1">
+            {(['csv','json','md'] as const).map(fmt => (
+              <button key={fmt} onClick={() => exportOpportunities(opps, fmt)}
+                className="flex items-center gap-1 text-slate-400 hover:text-white px-2 py-1 rounded text-xs transition-colors">
+                <Download size={11} /> .{fmt}
+              </button>
+            ))}
+          </div>
+          <button onClick={load} className="p-2 text-slate-400 hover:text-white transition-colors">
+            <RefreshCw size={16} />
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-2 mb-6 flex-wrap">

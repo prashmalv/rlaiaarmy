@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle, Send, Clock, RefreshCw, Zap, Image, ExternalLink } from 'lucide-react'
+import { CheckCircle, Send, Clock, RefreshCw, Zap, Image, ExternalLink, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { postsApi } from '../services/api'
+import { exportPosts } from '../utils/export'
 
 const platformDot = (p: string) => {
   const bg: Record<string, string> = {
@@ -86,9 +87,19 @@ export function ContentQueue() {
           <h1 className="text-2xl font-bold text-white">Content Queue</h1>
           <p className="text-slate-400 text-sm mt-1">{posts.length} posts · Review and publish to social media</p>
         </div>
-        <button onClick={load} className="p-2 text-slate-400 hover:text-white transition-colors">
-          <RefreshCw size={16} />
-        </button>
+        <div className="flex gap-2 items-center">
+          <div className="flex gap-1 bg-slate-800 border border-slate-700 rounded-lg p-1">
+            {(['csv','json','md'] as const).map(fmt => (
+              <button key={fmt} onClick={() => exportPosts(posts, fmt)}
+                className="flex items-center gap-1 text-slate-400 hover:text-white px-2 py-1 rounded text-xs transition-colors">
+                <Download size={11} /> .{fmt}
+              </button>
+            ))}
+          </div>
+          <button onClick={load} className="p-2 text-slate-400 hover:text-white transition-colors">
+            <RefreshCw size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Credentials hint */}
