@@ -44,8 +44,27 @@ When producing JSON, return ONLY valid JSON with no markdown."""
         return response.content[0].text
 
     def _parse_json(self, text: str) -> dict | list:
+        # Strip markdown fences
         if "```json" in text:
             text = text.split("```json")[1].split("```")[0].strip()
         elif "```" in text:
             text = text.split("```")[1].split("```")[0].strip()
-        return json.loads(text)
+
+        # Try direct parse first
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+
+        # Find outermost JSON object or array and try that
+        for start_char, end_char in [('{', '}'), ('[', ']')]:
+            start = text.find(start_char)
+            end = text.rfind(end_char)
+            if start != -1 and end > start:
+                try:
+                    return json.loads(text[start:end + 1])
+                except json.JSONDecodeError:
+                    pass
+
+        # Last resort: the text may be truncated — raise so caller uses fallback
+        raise json.JSONDecodeError("Could not parse JSON", text, 0)

@@ -52,7 +52,7 @@ Return JSON:
 Make content specific, India-relevant, and tied to real business outcomes.
 Return ONLY valid JSON."""
 
-        output = self._call_llm(prompt, max_tokens=4096)
+        output = self._call_llm(prompt, max_tokens=8096)
         try:
             return self._parse_json(output)
         except:
