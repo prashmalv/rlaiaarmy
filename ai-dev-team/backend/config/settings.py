@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     MAX_ENGINEERS: int = 3
     MAX_FULLSTACK_DEVS: int = 3
 
-    OUTPUT_DIR: str = "./generated_projects"
-    REPORTS_DIR: str = "./reports_output"
+    OUTPUT_DIR: str = "/tmp/generated_projects"
+    REPORTS_DIR: str = "/tmp/reports_output"
 
     class Config:
         env_file = ".env"
